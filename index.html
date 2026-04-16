@@ -1,3 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vetic Audit Tool</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #ffe4ec, #ffffff);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 350px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ff4d88;
+            margin-bottom: 5px;
+        }
+
+        .paw {
+            font-size: 24px;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 8px;
+            background: #ff4d88;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #e6005c;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #444;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <div class="logo">Vetic <span class="paw">🐾</span></div>
+    <h2>Audit Tool</h2>
+
+    <select id="clinic">
+        <option value="">Select Clinic</option>
+    </select>
+
+    <select id="category">
+        <option value="">Select Category</option>
+    </select>
+
+    <button onclick="runAudit()">Run Audit</button>
+
+    <div id="result"></div>
+</div>
+
 <script>
 async function loadData() {
     const url = "https://docs.google.com/spreadsheets/d/14mJ8MC9RbpJbLbAkoxcDXPQeTsw3I5hO3cYPTpXilvs/export?format=csv&gid=1766772634";
@@ -25,7 +119,6 @@ async function loadData() {
         }
     });
 
-    // fill clinic dropdown (unique)
     clinicSet.forEach(c => {
         let opt = document.createElement("option");
         opt.value = c;
@@ -33,7 +126,6 @@ async function loadData() {
         clinicDropdown.appendChild(opt);
     });
 
-    // fill category dropdown (unique)
     categorySet.forEach(c => {
         let opt = document.createElement("option");
         opt.value = c;
@@ -47,13 +139,16 @@ function runAudit() {
     let category = document.getElementById("category").value;
 
     if (!clinic || !category) {
-        document.getElementById("result").innerText = "⚠️ Select both";
+        document.getElementById("result").innerText = "⚠️ Please select both fields";
         return;
     }
 
     document.getElementById("result").innerText =
-        "✅ " + clinic + " - " + category;
+        "✅ Audit ready for: " + clinic + " (" + category + ")";
 }
 
 window.onload = loadData;
 </script>
+
+</body>
+</html>
