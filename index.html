@@ -2,26 +2,89 @@
 <html>
 <head>
     <title>Audit Tool</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .box {
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 10px;
+            width: 400px;
+            margin: auto;
+        }
+
+        select, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            border-radius: 5px;
+            border: none;
+        }
+
+        button {
+            background: #22c55e;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
 </head>
+
 <body>
-    <h1>Audit Checker</h1>
-    
-    <textarea id="input" placeholder="Paste your data here"></textarea>
-    <br><br>
-    <button onclick="checkAudit()">Check</button>
-    
-    <p id="result"></p>
+
+    <div class="box">
+        <h1>Audit Tool</h1>
+
+        <label>Clinic Name</label>
+        <select id="clinic">
+            <option value="">Select Clinic</option>
+            <option>Lower Parel</option>
+            <option>Whitefield</option>
+            <option>HSR Layout</option>
+        </select>
+
+        <label>Category</label>
+        <select id="category">
+            <option value="">Select Category</option>
+            <option>VMS</option>
+            <option>OMS</option>
+            <option>GRN</option>
+        </select>
+
+        <button onclick="runAudit()">Run Audit</button>
+
+        <div id="result"></div>
+    </div>
 
     <script>
-        function checkAudit() {
-            let data = document.getElementById("input").value;
-            
-            if(data.includes("error")) {
-                document.getElementById("result").innerText = "❌ Issue Found";
-            } else {
-                document.getElementById("result").innerText = "✅ All Good";
+        function runAudit() {
+            let clinic = document.getElementById("clinic").value;
+            let category = document.getElementById("category").value;
+
+            if (!clinic || !category) {
+                document.getElementById("result").innerText = "⚠️ Please select all fields";
+                return;
             }
+
+            document.getElementById("result").innerText =
+                "✅ Audit Started for " + clinic + " (" + category + ")";
         }
     </script>
+
 </body>
 </html>
