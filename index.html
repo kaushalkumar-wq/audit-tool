@@ -1,172 +1,153 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Vetic Login</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vetic Audit Tool</title>
+
     <style>
-        * { box-sizing: border-box; }
         body {
             margin: 0;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #fff7fb, #ffe3ef);
-            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #ffe4ec, #ffffff);
             display: flex;
-            align-items: center;
             justify-content: center;
-            color: #1f2937;
+            align-items: center;
+            height: 100vh;
         }
-        .wrap {
-            width: 100%;
-            max-width: 420px;
-            padding: 24px;
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 350px;
+            text-align: center;
         }
-        .card {
-            background: rgba(255,255,255,0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid #f8cddd;
-            border-radius: 24px;
-            padding: 32px 28px;
-            box-shadow: 0 20px 50px rgba(255, 77, 136, 0.12);
-        }
+
         .logo {
-            width: 72px;
-            height: 72px;
-            margin: 0 auto 14px;
-            border-radius: 20px;
-            background: linear-gradient(135deg, #ff4d88, #ff8fb3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 34px;
-            color: white;
-            box-shadow: 0 10px 24px rgba(255, 77, 136, 0.28);
+            font-size: 28px;
+            font-weight: bold;
+            color: #ff4d88;
+            margin-bottom: 5px;
         }
-        h1 {
-            margin: 0;
-            text-align: center;
-            font-size: 30px;
+
+        .paw {
+            font-size: 24px;
         }
-        .sub {
-            text-align: center;
-            color: #6b7280;
-            margin: 8px 0 24px;
-            font-size: 14px;
+
+        h2 {
+            margin-bottom: 20px;
+            color: #333;
         }
-        label {
-            display: block;
-            text-align: left;
-            font-size: 13px;
-            font-weight: 600;
-            margin: 14px 0 8px;
-            color: #4b5563;
-        }
-        input {
+
+        select {
             width: 100%;
-            padding: 14px 14px;
-            border: 1px solid #f3bfd2;
-            border-radius: 14px;
-            outline: none;
+            padding: 10px;
+            margin-top: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
             font-size: 14px;
-            background: #fff;
         }
-        input:focus {
-            border-color: #ff4d88;
-            box-shadow: 0 0 0 4px rgba(255, 77, 136, 0.12);
-        }
+
         button {
             width: 100%;
-            margin-top: 22px;
-            padding: 14px;
+            padding: 12px;
+            margin-top: 20px;
             border: none;
-            border-radius: 14px;
-            background: linear-gradient(135deg, #ff4d88, #ff7aa7);
+            border-radius: 8px;
+            background: #ff4d88;
             color: white;
-            font-size: 15px;
-            font-weight: 700;
+            font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 10px 24px rgba(255, 77, 136, 0.25);
         }
-        button:hover {
-            transform: translateY(-1px);
-        }
-        .msg {
-            margin-top: 14px;
-            text-align: center;
-            font-size: 14px;
-            min-height: 20px;
-        }
-        .hint {
-            margin-top: 18px;
-            font-size: 12px;
-            color: #6b7280;
-            text-align: center;
+
+        #result {
+            margin-top: 20px;
         }
     </style>
 </head>
+
 <body>
-    <div class="wrap">
-        <div class="card">
-            <div class="logo">🐾</div>
-            <h1>Vetic Login</h1>
-            <div class="sub">Sign in to access the audit dashboard</div>
 
-            <label for="email">Email</label>
-            <input id="email" type="email" placeholder="Enter your email" />
+<div class="container">
+    <div class="logo">Vetic 🐾</div>
+    <h2>Audit Tool</h2>
 
-            <label for="password">Password</label>
-            <input id="password" type="password" placeholder="Enter your password" />
+    <!-- IMPORTANT: IDs same rehne chahiye -->
+    <select id="clinic">
+        <option value="">Select Clinic</option>
+    </select>
 
-            <button onclick="login()">Login</button>
+    <select id="category">
+        <option value="">Select Category</option>
+    </select>
 
-            <div id="msg" class="msg"></div>
-            <div class="hint">Admin access is controlled separately.</div>
-        </div>
-    </div>
+    <button onclick="runAudit()">Run Audit</button>
 
-    <script>
-        const users = [
-            {
-                email: "Kaushal.kumar@vetic.in",
-                password: "Admin@123",
-                role: "admin",
-                name: "Kaushal Kumar"
-            },
-            {
-                email: "user1@vetic.in",
-                password: "User@123",
-                role: "user",
-                name: "Team Member"
-            },
-            {
-                email: "user2@vetic.in",
-                password: "User@123",
-                role: "user",
-                name: "Audit User"
-            }
-        ];
+    <div id="result"></div>
+</div>
 
-        function login() {
-            const email = document.getElementById("email").value.trim();
-            const password = document.getElementById("password").value.trim();
-            const msg = document.getElementById("msg");
+<script>
+async function loadData() {
+    const url = "https://docs.google.com/spreadsheets/d/14mJ8MC9RbpJbLbAkoxcDXPQeTsw3I5hO3cYPTpXilvs/export?format=csv&gid=1766772634";
 
-            const foundUser = users.find(
-                u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-            );
+    let response = await fetch(url);
+    let data = await response.text();
 
-            if (!foundUser) {
-                msg.style.color = "#e11d48";
-                msg.innerText = "Invalid email or password";
-                return;
-            }
+    let rows = data.split("\n").slice(1);
 
-            localStorage.setItem("vetic_logged_in", "true");
-            localStorage.setItem("vetic_user_email", foundUser.email);
-            localStorage.setItem("vetic_user_role", foundUser.role);
-            localStorage.setItem("vetic_user_name", foundUser.name);
+    let clinicDropdown = document.getElementById("clinic");
+    let categoryDropdown = document.getElementById("category");
 
-            window.location.href = "audit.html";
+    if (!clinicDropdown || !categoryDropdown) {
+        console.log("Dropdown missing");
+        return;
+    }
+
+    let clinicSet = new Set();
+    let categorySet = new Set();
+
+    rows.forEach(row => {
+        let cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
+
+        if (cols && cols.length >= 2) {
+            let clinic = cols[0].replace(/"/g, "").trim();
+            let category = cols[1].replace(/"/g, "").trim();
+
+            if (clinic) clinicSet.add(clinic);
+            if (category) categorySet.add(category);
         }
-    </script>
+    });
+
+    clinicSet.forEach(c => {
+        let opt = document.createElement("option");
+        opt.value = c;
+        opt.text = c;
+        clinicDropdown.appendChild(opt);
+    });
+
+    categorySet.forEach(c => {
+        let opt = document.createElement("option");
+        opt.value = c;
+        opt.text = c;
+        categoryDropdown.appendChild(opt);
+    });
+}
+
+function runAudit() {
+    let clinic = document.getElementById("clinic").value;
+    let category = document.getElementById("category").value;
+
+    if (!clinic || !category) {
+        document.getElementById("result").innerText = "⚠️ Select both";
+        return;
+    }
+
+    document.getElementById("result").innerText =
+        "✅ " + clinic + " - " + category;
+}
+
+window.onload = loadData;
+</script>
+
 </body>
 </html>
