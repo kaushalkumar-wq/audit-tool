@@ -1,90 +1,49 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Audit Tool</title>
-    <style>
-        body {
-            font-family: Arial;
-            background: #0f172a;
-            color: white;
-            text-align: center;
-            padding: 40px;
-        }
+<script>
+async function loadData() {
+    const url = "https://docs.google.com/spreadsheets/d/14mJ8MC9RbpJbLbAkoxcDXPQeTsw3I5hO3cYPTpXilvs/export?format=csv&gid=1766772634";
 
-        .box {
-            background: #1e293b;
-            padding: 30px;
-            border-radius: 10px;
-            width: 400px;
-            margin: auto;
-        }
+    let response = await fetch(url);
+    let data = await response.text();
 
-        select, button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 15px;
-            border-radius: 5px;
-            border: none;
-        }
+    let rows = data.split("\n").slice(1); // skip header
 
-        button {
-            background: #22c55e;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-        }
+    let clinicSet = new Set();
+    let categorySet = new Set();
 
-        h1 {
-            margin-bottom: 20px;
-        }
+    rows.forEach(row => {
+        let cols = row.split(",");
+        if(cols[0]) clinicSet.add(cols[0].trim());
+        if(cols[1]) categorySet.add(cols[1].trim());
+    });
 
-        #result {
-            margin-top: 20px;
-            font-size: 18px;
-        }
-    </style>
-</head>
+    let clinicDropdown = document.getElementById("clinic");
+    let categoryDropdown = document.getElementById("category");
 
-<body>
+    clinicSet.forEach(c => {
+        let option = document.createElement("option");
+        option.text = c;
+        clinicDropdown.add(option);
+    });
 
-    <div class="box">
-        <h1>Audit Tool</h1>
+    categorySet.forEach(c => {
+        let option = document.createElement("option");
+        option.text = c;
+        categoryDropdown.add(option);
+    });
+}
 
-        <label>Clinic Name</label>
-        <select id="clinic">
-            <option value="">Select Clinic</option>
-            <option>Lower Parel</option>
-            <option>Whitefield</option>
-            <option>HSR Layout</option>
-        </select>
+window.onload = loadData;
 
-        <label>Category</label>
-        <select id="category">
-            <option value="">Select Category</option>
-            <option>VMS</option>
-            <option>OMS</option>
-            <option>GRN</option>
-        </select>
+function runAudit() {
+    let clinic = document.getElementById("clinic").value;
+    let category = document.getElementById("category").value;
 
-        <button onclick="runAudit()">Run Audit</button>
+    if (!clinic || !category) {
+        document.getElementById("result").innerText = "⚠️ Please select all fields";
+        return;
+    }
 
-        <div id="result"></div>
-    </div>
-
-    <script>
-        function runAudit() {
-            let clinic = document.getElementById("clinic").value;
-            let category = document.getElementById("category").value;
-
-            if (!clinic || !category) {
-                document.getElementById("result").innerText = "⚠️ Please select all fields";
-                return;
-            }
-
-            document.getElementById("result").innerText =
-                "✅ Audit Started for " + clinic + " (" + category + ")";
-        }
-    </script>
-
-</body>
-</html>
+    document.getElementById("result").innerText =
+        "✅ Audit Started for " + clinic + " (" + category + ")";
+}
+</script>
