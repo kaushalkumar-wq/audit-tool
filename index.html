@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audit Tool</title>
+</head>
+<body>
+    <h1>Audit Checker</h1>
+    
+    <textarea id="input" placeholder="Paste your data here"></textarea>
+    <br><br>
+    <button onclick="checkAudit()">Check</button>
+    
+    <p id="result"></p>
+
+    <script>
+        function checkAudit() {
+            let data = document.getElementById("input").value;
+            
+            if(data.includes("error")) {
+                document.getElementById("result").innerText = "❌ Issue Found";
+            } else {
+                document.getElementById("result").innerText = "✅ All Good";
+            }
+        }
+    </script>
+</body>
+</html>
