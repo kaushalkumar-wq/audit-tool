@@ -5,45 +5,32 @@ async function loadData() {
     let response = await fetch(url);
     let data = await response.text();
 
-    let rows = data.split("\n").slice(1); // skip header
-
-    let clinicSet = new Set();
-    let categorySet = new Set();
-
-    rows.forEach(row => {
-        let cols = row.split(",");
-        if(cols[0]) clinicSet.add(cols[0].trim());
-        if(cols[1]) categorySet.add(cols[1].trim());
-    });
+    let rows = data.split("\n").slice(1);
 
     let clinicDropdown = document.getElementById("clinic");
     let categoryDropdown = document.getElementById("category");
 
-    clinicSet.forEach(c => {
-        let option = document.createElement("option");
-        option.text = c;
-        clinicDropdown.add(option);
-    });
+    rows.forEach(row => {
+        let cols = row.split(",");
 
-    categorySet.forEach(c => {
-        let option = document.createElement("option");
-        option.text = c;
-        categoryDropdown.add(option);
+        if (cols.length >= 2) {
+            let clinic = cols[0].replace(/"/g, "").trim();
+            let category = cols[1].replace(/"/g, "").trim();
+
+            if (clinic && ![...clinicDropdown.options].some(o => o.text === clinic)) {
+                let option = document.createElement("option");
+                option.text = clinic;
+                clinicDropdown.add(option);
+            }
+
+            if (category && ![...categoryDropdown.options].some(o => o.text === category)) {
+                let option = document.createElement("option");
+                option.text = category;
+                categoryDropdown.add(option);
+            }
+        }
     });
 }
 
 window.onload = loadData;
-
-function runAudit() {
-    let clinic = document.getElementById("clinic").value;
-    let category = document.getElementById("category").value;
-
-    if (!clinic || !category) {
-        document.getElementById("result").innerText = "⚠️ Please select all fields";
-        return;
-    }
-
-    document.getElementById("result").innerText =
-        "✅ Audit Started for " + clinic + " (" + category + ")";
-}
 </script>
