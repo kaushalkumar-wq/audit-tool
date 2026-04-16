@@ -37,9 +37,9 @@
             let categoryDropdown = document.getElementById("category");
 
             rows.forEach(row => {
-                let cols = row.split(",");
+                let cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
 
-                if (cols.length >= 2) {
+                if (cols && cols.length >= 2) {
                     let clinic = cols[0].replace(/"/g, "").trim();
                     let category = cols[1].replace(/"/g, "").trim();
 
