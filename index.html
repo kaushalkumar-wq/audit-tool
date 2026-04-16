@@ -1,154 +1,172 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Vetic Audit Tool</title>
-
+    <title>Vetic Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
+        * { box-sizing: border-box; }
         body {
             margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #ffe4ec, #ffffff);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #fff7fb, #ffe3ef);
+            min-height: 100vh;
             display: flex;
-            justify-content: center;
             align-items: center;
-            height: 100vh;
+            justify-content: center;
+            color: #1f2937;
         }
-
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            width: 350px;
-            text-align: center;
-        }
-
-        .logo {
-            font-size: 28px;
-            font-weight: bold;
-            color: #ff4d88;
-            margin-bottom: 5px;
-        }
-
-        .paw {
-            font-size: 24px;
-        }
-
-        h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        select {
+        .wrap {
             width: 100%;
-            padding: 10px;
-            margin-top: 12px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
+            max-width: 420px;
+            padding: 24px;
+        }
+        .card {
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid #f8cddd;
+            border-radius: 24px;
+            padding: 32px 28px;
+            box-shadow: 0 20px 50px rgba(255, 77, 136, 0.12);
+        }
+        .logo {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 14px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #ff4d88, #ff8fb3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 34px;
+            color: white;
+            box-shadow: 0 10px 24px rgba(255, 77, 136, 0.28);
+        }
+        h1 {
+            margin: 0;
+            text-align: center;
+            font-size: 30px;
+        }
+        .sub {
+            text-align: center;
+            color: #6b7280;
+            margin: 8px 0 24px;
             font-size: 14px;
         }
-
+        label {
+            display: block;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            margin: 14px 0 8px;
+            color: #4b5563;
+        }
+        input {
+            width: 100%;
+            padding: 14px 14px;
+            border: 1px solid #f3bfd2;
+            border-radius: 14px;
+            outline: none;
+            font-size: 14px;
+            background: #fff;
+        }
+        input:focus {
+            border-color: #ff4d88;
+            box-shadow: 0 0 0 4px rgba(255, 77, 136, 0.12);
+        }
         button {
             width: 100%;
-            padding: 12px;
-            margin-top: 20px;
+            margin-top: 22px;
+            padding: 14px;
             border: none;
-            border-radius: 8px;
-            background: #ff4d88;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #ff4d88, #ff7aa7);
             color: white;
-            font-weight: bold;
+            font-size: 15px;
+            font-weight: 700;
             cursor: pointer;
-            transition: 0.3s;
+            box-shadow: 0 10px 24px rgba(255, 77, 136, 0.25);
         }
-
         button:hover {
-            background: #e6005c;
+            transform: translateY(-1px);
         }
-
-        #result {
-            margin-top: 20px;
+        .msg {
+            margin-top: 14px;
+            text-align: center;
             font-size: 14px;
-            color: #444;
+            min-height: 20px;
+        }
+        .hint {
+            margin-top: 18px;
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
         }
     </style>
 </head>
-
 <body>
+    <div class="wrap">
+        <div class="card">
+            <div class="logo">🐾</div>
+            <h1>Vetic Login</h1>
+            <div class="sub">Sign in to access the audit dashboard</div>
 
-<div class="container">
-    <div class="logo">Vetic <span class="paw">🐾</span></div>
-    <h2>Audit Tool</h2>
+            <label for="email">Email</label>
+            <input id="email" type="email" placeholder="Enter your email" />
 
-    <select id="clinic">
-        <option value="">Select Clinic</option>
-    </select>
+            <label for="password">Password</label>
+            <input id="password" type="password" placeholder="Enter your password" />
 
-    <select id="category">
-        <option value="">Select Category</option>
-    </select>
+            <button onclick="login()">Login</button>
 
-    <button onclick="runAudit()">Run Audit</button>
+            <div id="msg" class="msg"></div>
+            <div class="hint">Admin access is controlled separately.</div>
+        </div>
+    </div>
 
-    <div id="result"></div>
-</div>
+    <script>
+        const users = [
+            {
+                email: "Kaushal.kumar@vetic.in",
+                password: "Admin@123",
+                role: "admin",
+                name: "Kaushal Kumar"
+            },
+            {
+                email: "user1@vetic.in",
+                password: "User@123",
+                role: "user",
+                name: "Team Member"
+            },
+            {
+                email: "user2@vetic.in",
+                password: "User@123",
+                role: "user",
+                name: "Audit User"
+            }
+        ];
 
-<script>
-async function loadData() {
-    const url = "https://docs.google.com/spreadsheets/d/14mJ8MC9RbpJbLbAkoxcDXPQeTsw3I5hO3cYPTpXilvs/export?format=csv&gid=1766772634";
+        function login() {
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const msg = document.getElementById("msg");
 
-    let response = await fetch(url);
-    let data = await response.text();
+            const foundUser = users.find(
+                u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+            );
 
-    let rows = data.split("\n").slice(1);
+            if (!foundUser) {
+                msg.style.color = "#e11d48";
+                msg.innerText = "Invalid email or password";
+                return;
+            }
 
-    let clinicDropdown = document.getElementById("clinic");
-    let categoryDropdown = document.getElementById("category");
+            localStorage.setItem("vetic_logged_in", "true");
+            localStorage.setItem("vetic_user_email", foundUser.email);
+            localStorage.setItem("vetic_user_role", foundUser.role);
+            localStorage.setItem("vetic_user_name", foundUser.name);
 
-    let clinicSet = new Set();
-    let categorySet = new Set();
-
-    rows.forEach(row => {
-        let cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
-
-        if (cols && cols.length >= 2) {
-            let clinic = cols[0].replace(/"/g, "").trim();
-            let category = cols[1].replace(/"/g, "").trim();
-
-            if (clinic) clinicSet.add(clinic);
-            if (category) categorySet.add(category);
+            window.location.href = "audit.html";
         }
-    });
-
-    clinicSet.forEach(c => {
-        let opt = document.createElement("option");
-        opt.value = c;
-        opt.text = c;
-        clinicDropdown.appendChild(opt);
-    });
-
-    categorySet.forEach(c => {
-        let opt = document.createElement("option");
-        opt.value = c;
-        opt.text = c;
-        categoryDropdown.appendChild(opt);
-    });
-}
-
-function runAudit() {
-    let clinic = document.getElementById("clinic").value;
-    let category = document.getElementById("category").value;
-
-    if (!clinic || !category) {
-        document.getElementById("result").innerText = "⚠️ Please select both fields";
-        return;
-    }
-
-    document.getElementById("result").innerText =
-        "✅ Audit ready for: " + clinic + " (" + category + ")";
-}
-
-window.onload = loadData;
-</script>
-
+    </script>
 </body>
 </html>
