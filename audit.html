@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vetic Audit Tool</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #fff7fb, #ffe3ef);
+            min-height: 100vh;
+            color: #1f2937;
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 28px;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid #f6d2df;
+            position: sticky;
+            top: 0;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 22px;
+            color: #ff4d88;
+        }
+        .brand-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #ff4d88, #ff8fb3);
+            color: white;
+            box-shadow: 0 8px 20px rgba(255, 77, 136, 0.22);
+        }
+        .userbox {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .badge {
+            background: #fff0f6;
+            color: #d61f69;
+            border: 1px solid #f8cddd;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .logout-btn {
+            border: none;
+            background: #ff4d88;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .main {
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        .card {
+            width: 100%;
+            max-width: 520px;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid #f8cddd;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(255, 77, 136, 0.12);
+            padding: 32px;
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 34px;
+            text-align: center;
+        }
+        .sub {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 24px;
+        }
+        label {
+            display: block;
+            margin: 14px 0 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #4b5563;
+        }
+        select {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            border: 1px solid #f3bfd2;
+            background: white;
+            font-size: 14px;
+            outline: none;
+        }
+        select:focus {
+            border-color: #ff4d88;
+            box-shadow: 0 0 0 4px rgba(255, 77, 136, 0.12);
+        }
+        .run-btn {
+            width: 100%;
+            margin-top: 22px;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #ff4d88, #ff7aa7);
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(255, 77, 136, 0.25);
+        }
+        #result {
+            margin-top: 20px;
+            padding: 14px;
+            border-radius: 14px;
+            background: #fff7fb;
+            border: 1px solid #f8d3e0;
+            min-height: 52px;
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="brand">
+            <div class="brand-icon">🐾</div>
+            <div>Vetic Audit</div>
+        </div>
+        <div class="userbox">
+            <div id="userInfo" class="badge"></div>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="card">
+            <h1>Audit Tool</h1>
+            <div class="sub">Select clinic and category to continue</div>
+
+            <label for="clinic">Clinic Name</label>
+            <select id="clinic">
+                <option value="">Select Clinic</option>
+            </select>
+
+            <label for="category">Category</label>
+            <select id="category">
+                <option value="">Select Category</option>
+            </select>
+
+            <button class="run-btn" onclick="runAudit()">Run Audit</button>
+
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        if (localStorage.getItem("vetic_logged_in") !== "true") {
+            window.location.href = "index.html";
+        }
+
+        const userName = localStorage.getItem("vetic_user_name") || "User";
+        const userRole = localStorage.getItem("vetic_user_role") || "user";
+        const userEmail = localStorage.getItem("vetic_user_email") || "";
+
+        document.getElementById("userInfo").innerText =
+            userName + " • " + userRole.toUpperCase();
+
+        async function loadData() {
+            const url = "https://docs.google.com/spreadsheets/d/14mJ8MC9RbpJbLbAkoxcDXPQeTsw3I5hO3cYPTpXilvs/export?format=csv&gid=1766772634";
+
+            let response = await fetch(url);
+            let data = await response.text();
+
+            let rows = data.split("\n").slice(1);
+
+            let clinicDropdown = document.getElementById("clinic");
+            let categoryDropdown = document.getElementById("category");
+
+            let clinicSet = new Set();
+            let categorySet = new Set();
+
+            rows.forEach(row => {
+                let cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
+
+                if (cols && cols.length >= 2) {
+                    let clinic = cols[0].replace(/"/g, "").trim();
+                    let category = cols[1].replace(/"/g, "").trim();
+
+                    if (clinic) clinicSet.add(clinic);
+                    if (category) categorySet.add(category);
+                }
+            });
+
+            clinicSet.forEach(c => {
+                let opt = document.createElement("option");
+                opt.value = c;
+                opt.text = c;
+                clinicDropdown.appendChild(opt);
+            });
+
+            categorySet.forEach(c => {
+                let opt = document.createElement("option");
+                opt.value = c;
+                opt.text = c;
+                categoryDropdown.appendChild(opt);
+            });
+        }
+
+        function runAudit() {
+            let clinic = document.getElementById("clinic").value;
+            let category = document.getElementById("category").value;
+
+            if (!clinic || !category) {
+                document.getElementById("result").innerText = "⚠️ Please select both Clinic and Category.";
+                return;
+            }
+
+            document.getElementById("result").innerText =
+                "✅ Audit ready for: " + clinic + " (" + category + ")" + "\nLogged in as: " + userEmail;
+        }
+
+        function logout() {
+            localStorage.removeItem("vetic_logged_in");
+            localStorage.removeItem("vetic_user_email");
+            localStorage.removeItem("vetic_user_role");
+            localStorage.removeItem("vetic_user_name");
+            window.location.href = "index.html";
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>
