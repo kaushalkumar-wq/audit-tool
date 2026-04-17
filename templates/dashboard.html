@@ -1,6 +1,3 @@
-<div style="text-align:right;padding:15px;">
-<a href="/logout">Logout</a>
-</div>
 <!DOCTYPE html>
 <html>
 <head>
@@ -11,10 +8,77 @@
             margin: 0;
             font-family: 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #ffe4ec, #ffffff);
+            min-height: 100vh;
+        }
+
+        .topbar {
+            background: white;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .top-left h2 {
+            margin: 0;
+            color: #ff4d88;
+            font-size: 22px;
+        }
+
+        .top-left p {
+            margin: 4px 0 0 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .logout-btn {
+            text-decoration: none;
+            background: #ff4d88;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .admin-panel {
+            margin: 20px auto;
+            width: 90%;
+            max-width: 900px;
+            background: #fff4f8;
+            padding: 20px;
+            border-radius: 16px;
+        }
+
+        .admin-panel h3 {
+            margin-top: 0;
+            color: #ff4d88;
+        }
+
+        .admin-btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .pink-btn {
+            background: #ff4d88;
+            color: white;
+        }
+
+        .dark-btn {
+            background: #333;
+            color: white;
+        }
+
+        .main-area {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            padding: 40px 20px;
         }
 
         .container {
@@ -31,10 +95,6 @@
             font-weight: bold;
             color: #ff4d88;
             margin-bottom: 5px;
-        }
-
-        .paw {
-            font-size: 24px;
         }
 
         h2 {
@@ -65,17 +125,42 @@
 
         #result {
             margin-top: 20px;
+            font-weight: bold;
+            color: #333;
         }
     </style>
 </head>
 
 <body>
 
+<!-- Top Bar -->
+<div class="topbar">
+    <div class="top-left">
+        <h2>Vetic 🐾 Admin Portal</h2>
+        <p>Welcome {{ user }} | Role: <b>{{ role }}</b></p>
+    </div>
+
+    <div>
+        <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+</div>
+
+<!-- Admin Panel -->
+{% if role == "Admin" %}
+<div class="admin-panel">
+    <h3>⚙️ Admin Panel</h3>
+
+    <button class="admin-btn pink-btn">Add Staff</button>
+    <button class="admin-btn dark-btn">Manage Users</button>
+</div>
+{% endif %}
+
+<!-- Audit Tool -->
+<div class="main-area">
 <div class="container">
     <div class="logo">Vetic 🐾</div>
     <h2>Audit Tool</h2>
 
-    <!-- IMPORTANT: IDs same rehne chahiye -->
     <select id="clinic">
         <option value="">Select Clinic</option>
     </select>
@@ -87,6 +172,7 @@
     <button onclick="runAudit()">Run Audit</button>
 
     <div id="result"></div>
+</div>
 </div>
 
 <script>
@@ -100,11 +186,6 @@ async function loadData() {
 
     let clinicDropdown = document.getElementById("clinic");
     let categoryDropdown = document.getElementById("category");
-
-    if (!clinicDropdown || !categoryDropdown) {
-        console.log("Dropdown missing");
-        return;
-    }
 
     let clinicSet = new Set();
     let categorySet = new Set();
