@@ -1,6 +1,7 @@
 import csv
 import json
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -396,7 +397,7 @@ def create_clinic_audit_sheet(rows, mapped_clinic, source):
 
 
 def create_spreadsheet_file(drive_service, title):
-    folder_id = os.environ.get(GOOGLE_DRIVE_FOLDER_ENV)
+    folder_id = parse_drive_folder_id(os.environ.get(GOOGLE_DRIVE_FOLDER_ENV))
     metadata = {
         "name": title,
         "mimeType": "application/vnd.google-apps.spreadsheet",
@@ -410,6 +411,22 @@ def create_spreadsheet_file(drive_service, title):
         supportsAllDrives=True,
     ).execute()
     return file["id"]
+
+
+def parse_drive_folder_id(value):
+    if not value:
+        return ""
+
+    text = value.strip()
+    folder_match = re.search(r"/folders/([a-zA-Z0-9_-]+)", text)
+    if folder_match:
+        return folder_match.group(1)
+
+    id_match = re.search(r"[?&]id=([a-zA-Z0-9_-]+)", text)
+    if id_match:
+        return id_match.group(1)
+
+    return text
 
 
 def get_first_sheet_id(sheets_service, spreadsheet_id):
