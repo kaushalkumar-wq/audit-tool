@@ -1,290 +1,224 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Vetic Audit Tool</title>
-
+    <title>Vetic Audit Data</title>
     <style>
         body {
             margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #ffe4ec, #ffffff);
-            min-height: 100vh;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: #f6f7fb;
+            color: #1f2937;
         }
 
         .topbar {
-            background: white;
-            padding: 15px 25px;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 18px 28px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
-        .top-left h2 {
+        .title {
             margin: 0;
-            color: #ff4d88;
             font-size: 22px;
+            color: #111827;
         }
 
-        .top-left p {
-            margin: 4px 0 0 0;
-            font-size: 14px;
-            color: #666;
+        .subtitle {
+            margin: 4px 0 0;
+            color: #6b7280;
+            font-size: 13px;
         }
 
-        .logout-btn {
-            text-decoration: none;
-            background: #ff4d88;
-            color: white;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-weight: bold;
+        .summary {
+            font-weight: 700;
+            color: #0f766e;
         }
 
-        .admin-panel {
-            margin: 20px auto;
-            width: 90%;
-            max-width: 900px;
-            background: #fff4f8;
-            padding: 20px;
-            border-radius: 16px;
-        }
-
-        .admin-panel h3 {
-            margin-top: 0;
-            color: #ff4d88;
-        }
-
-        .admin-btn {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-right: 10px;
-        }
-
-        .pink-btn {
-            background: #ff4d88;
-            color: white;
-        }
-
-        .dark-btn {
-            background: #333;
-            color: white;
-        }
-
-        .main-area {
-            display: flex;
-            justify-content: center;
+        .toolbar {
+            padding: 16px 28px;
+            display: grid;
+            grid-template-columns: 1.3fr 1fr 1fr auto;
+            gap: 12px;
             align-items: center;
-            padding: 40px 20px;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
         }
 
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            width: 350px;
-            text-align: center;
-        }
-
-        .logo {
-            font-size: 28px;
-            font-weight: bold;
-            color: #ff4d88;
-            margin-bottom: 5px;
-        }
-
-        h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        select {
-            width: 100%;
-            padding: 10px;
-            margin-top: 12px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
+        input,
+        select,
+        button {
+            height: 38px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: #ffffff;
+            padding: 0 10px;
             font-size: 14px;
         }
 
         button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 20px;
+            background: #0f766e;
+            color: #ffffff;
             border: none;
-            border-radius: 8px;
-            background: #ff4d88;
-            color: white;
-            font-weight: bold;
+            font-weight: 700;
             cursor: pointer;
         }
 
-        #result {
-            margin-top: 20px;
-            font-weight: bold;
-            color: #333;
+        .table-wrap {
+            padding: 18px 28px 28px;
+            overflow: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            font-size: 13px;
+        }
+
+        th,
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+            vertical-align: top;
+            white-space: nowrap;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background: #f9fafb;
+            color: #374151;
+            z-index: 1;
+        }
+
+        .num {
+            text-align: right;
+        }
+
+        .priority {
+            font-weight: 700;
+        }
+
+        .very-high {
+            color: #b91c1c;
+        }
+
+        .high {
+            color: #b45309;
+        }
+
+        .normal {
+            color: #047857;
+        }
+
+        @media (max-width: 900px) {
+            .toolbar {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar {
+                display: block;
+            }
         }
     </style>
 </head>
-
 <body>
-
-<!-- Top Bar -->
-<div class="topbar">
-    <div class="top-left">
-        <h2>Vetic 🐾 Admin Portal</h2>
-        <p>Welcome {{ user }} | Role: <b>{{ role }}</b></p>
+    <div class="topbar">
+        <div>
+            <h1 class="title">Vetic Audit Data</h1>
+            <p class="subtitle">Bad Inventory May + QCOM in-hand quantity snapshot</p>
+        </div>
+        <div class="summary">
+            Showing <span id="visibleCount">{{ total_rows }}</span> / {{ total_rows }} rows
+        </div>
     </div>
 
-    <div>
-        <a href="/logout" class="logout-btn">Logout</a>
+    <div class="toolbar">
+        <input id="searchInput" type="search" placeholder="Search name, variant ID, clinic..." oninput="applyFilters()">
+
+        <select id="clinicFilter" onchange="applyFilters()">
+            <option value="">All Clinics</option>
+            {% for clinic in clinics %}
+            <option value="{{ clinic }}">{{ clinic }}</option>
+            {% endfor %}
+        </select>
+
+        <select id="priorityFilter" onchange="applyFilters()">
+            <option value="">All Priorities</option>
+            {% for priority in priorities %}
+            <option value="{{ priority }}">{{ priority }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="button" onclick="resetFilters()">Reset</button>
     </div>
-</div>
 
-<!-- Admin Panel -->
-{% if role == "Admin" %}
-<div class="admin-panel">
-    <h3>⚙️ Admin Panel</h3>
+    <div class="table-wrap">
+        <table id="auditTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Vetic Variant ID</th>
+                    <th>Clinic ID</th>
+                    <th>Clinic Name</th>
+                    <th>Mapped Clinic Name</th>
+                    <th class="num">In Hand Quantity</th>
+                    <th class="num">Bad Inventory Count</th>
+                    <th>Priority</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr
+                    data-search="{{ (row['Name'] ~ ' ' ~ row['Vetic Variant ID'] ~ ' ' ~ row['Clinic ID'] ~ ' ' ~ row['Clinic Name'] ~ ' ' ~ row['Mapped Clinic Name']) | lower }}"
+                    data-clinic="{{ row['Mapped Clinic Name'] }}"
+                    data-priority="{{ row['Priority'] }}"
+                >
+                    <td>{{ row["Name"] }}</td>
+                    <td>{{ row["Vetic Variant ID"] }}</td>
+                    <td>{{ row["Clinic ID"] }}</td>
+                    <td>{{ row["Clinic Name"] }}</td>
+                    <td>{{ row["Mapped Clinic Name"] }}</td>
+                    <td class="num">{{ row["In Hand Quantity"] }}</td>
+                    <td class="num">{{ row["Bad Inventory Count"] }}</td>
+                    <td class="priority {{ row['Priority'] | lower | replace(' ', '-') }}">{{ row["Priority"] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-    <button class="admin-btn pink-btn">Add Staff</button>
-    <button class="admin-btn dark-btn">Manage Users</button>
-</div>
-{% endif %}
+    <script>
+        function applyFilters() {
+            const search = document.getElementById("searchInput").value.trim().toLowerCase();
+            const clinic = document.getElementById("clinicFilter").value;
+            const priority = document.getElementById("priorityFilter").value;
+            const rows = document.querySelectorAll("#auditTable tbody tr");
+            let visible = 0;
 
-<!-- Audit Tool -->
-<div class="main-area">
-<div class="container">
-    <div class="logo">Vetic 🐾</div>
-    <h2>Audit Tool</h2>
+            rows.forEach(row => {
+                const searchMatch = !search || row.dataset.search.includes(search);
+                const clinicMatch = !clinic || row.dataset.clinic === clinic;
+                const priorityMatch = !priority || row.dataset.priority === priority;
+                const show = searchMatch && clinicMatch && priorityMatch;
 
-    <select id="clinic">
-        <option value="">Select Clinic</option>
-    </select>
-
-    <select id="category">
-        <option value="">Select Category</option>
-    </select>
-
-    <button onclick="runAudit()">Run Audit</button>
-
-    <div id="result"></div>
-</div>
-</div>
-
-<script>
-async function loadData() {
-    const url = "https://docs.google.com/spreadsheets/d/14mJ8MC9RbpJbLbAkoxcDXPQeTsw3I5hO3cYPTpXilvs/export?format=csv&gid=1766772634";
-
-    let response = await fetch(url);
-    let data = await response.text();
-
-    let rows = data.split("\n").slice(1);
-
-    let clinicDropdown = document.getElementById("clinic");
-    let categoryDropdown = document.getElementById("category");
-
-    let clinicSet = new Set();
-    let categorySet = new Set();
-
-    rows.forEach(row => {
-        let cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
-
-        if (cols && cols.length >= 2) {
-            let clinic = cols[0].replace(/"/g, "").trim();
-            let category = cols[1].replace(/"/g, "").trim();
-
-            if (clinic) clinicSet.add(clinic);
-            if (category) categorySet.add(category);
-        }
-    });
-
-    clinicSet.forEach(c => {
-        let opt = document.createElement("option");
-        opt.value = c;
-        opt.text = c;
-        clinicDropdown.appendChild(opt);
-    });
-
-    categorySet.forEach(c => {
-        let opt = document.createElement("option");
-        opt.value = c;
-        opt.text = c;
-        categoryDropdown.appendChild(opt);
-    });
-
-    try {
-        let clinicResponse = await fetch("/audit-clinics");
-        let clinicData = await clinicResponse.json();
-
-        if (clinicData.clinics) {
-            clinicDropdown.innerHTML = '<option value="">Select Clinic</option>';
-            clinicData.clinics.forEach(clinic => {
-                let opt = document.createElement("option");
-                opt.value = clinic.id;
-                opt.text = clinic.name;
-                clinicDropdown.appendChild(opt);
+                row.style.display = show ? "" : "none";
+                if (show) visible += 1;
             });
-        } else if (clinicData.error) {
-            document.getElementById("result").innerText = clinicData.error;
+
+            document.getElementById("visibleCount").innerText = visible;
         }
-    } catch (error) {
-        console.log("Mongo clinic list unavailable, using sheet clinics");
-    }
-}
 
-function runAudit() {
-    let clinic = document.getElementById("clinic").value;
-    let category = document.getElementById("category").value;
-
-    if (!clinic || !category) {
-        document.getElementById("result").innerText = "⚠️ Select both";
-        return;
-    }
-
-    document.getElementById("result").innerText =
-        "✅ " + clinic + " - " + category;
-}
-
-runAudit = async function() {
-    let clinicDropdown = document.getElementById("clinic");
-    let clinic = clinicDropdown.value;
-    let clinicName = clinicDropdown.options[clinicDropdown.selectedIndex].text;
-    let category = document.getElementById("category").value;
-
-    if (!clinic) {
-        document.getElementById("result").innerText = "Select clinic";
-        return;
-    }
-
-    document.getElementById("result").innerText = "Running audit...";
-
-    let response = await fetch("/run-audit", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            clinic_id: clinic,
-            clinic_name: clinicName,
-            category: category
-        })
-    });
-
-    let data = await response.json();
-
-    if (!response.ok) {
-        document.getElementById("result").innerText = data.error || "Audit failed";
-        return;
-    }
-
-    document.getElementById("result").innerText =
-        data.message + " | Rows: " + data.rows + " | To: " + data.email_to;
-}
-
-window.onload = loadData;
-</script>
-
+        function resetFilters() {
+            document.getElementById("searchInput").value = "";
+            document.getElementById("clinicFilter").value = "";
+            document.getElementById("priorityFilter").value = "";
+            applyFilters();
+        }
+    </script>
 </body>
 </html>
