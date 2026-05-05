@@ -132,7 +132,7 @@
             <h1 class="title">Vetic Audit Data</h1>
             <p class="subtitle">Bad Inventory May + QCOM in-hand quantity | Source: {{ data_source }}</p>
             {% if error %}
-            <p class="subtitle">Live data fallback reason: {{ error }}</p>
+            <p class="subtitle">Live Mongo is not connected. Add TRANSFER_ORDERS_MONGO_URI in Render environment variables to enable live data.</p>
             {% endif %}
         </div>
         <div class="summary">
