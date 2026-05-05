@@ -292,7 +292,7 @@
                 return;
             }
 
-            const variance = inHand - Number(physicalValue);
+            const variance = Number(physicalValue) - inHand;
             varianceCell.innerText = variance;
 
             if (variance > 0) {
