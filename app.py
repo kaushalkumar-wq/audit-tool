@@ -336,6 +336,44 @@ def filter_rows_by_mapped_clinic(rows, mapped_clinic):
     return [row for row in rows if row.get("Mapped Clinic Name") == mapped_clinic]
 
 
+def filter_dashboard_rows(rows, search="", clinic="", priority=""):
+    search = (search or "").strip().lower()
+    filtered_rows = rows
+
+    if search:
+        filtered_rows = [
+            row
+            for row in filtered_rows
+            if search
+            in " ".join(
+                [
+                    str(row.get("Name", "")),
+                    str(row.get("Vetic Variant ID", "")),
+                    str(row.get("Clinic ID", "")),
+                    str(row.get("Clinic Name", "")),
+                    str(row.get("Mapped Clinic Name", "")),
+                ]
+            ).lower()
+        ]
+
+    if clinic:
+        filtered_rows = [row for row in filtered_rows if row.get("Mapped Clinic Name") == clinic]
+
+    if priority:
+        filtered_rows = [row for row in filtered_rows if row.get("Partial Type") == priority]
+
+    return filtered_rows
+
+
+def parse_positive_int(value, default, minimum=1, maximum=500):
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return default
+
+    return max(minimum, min(number, maximum))
+
+
 def get_google_credentials():
     service_account_json = os.environ.get(GOOGLE_SERVICE_ACCOUNT_ENV)
     if not service_account_json:
@@ -645,13 +683,34 @@ def dashboard():
     rows, _, _ = get_current_rows(force_refresh=request.args.get("refresh") == "1")
     clinics = sorted({row.get("Mapped Clinic Name", "") for row in rows if row.get("Mapped Clinic Name")})
     priorities = ["Very High", "High", "Normal"]
+    search = request.args.get("search", "")
+    selected_clinic = request.args.get("clinic", "")
+    selected_priority = request.args.get("priority", "")
+    page_size = parse_positive_int(request.args.get("page_size"), 100, maximum=250)
+    filtered_rows = filter_dashboard_rows(rows, search, selected_clinic, selected_priority)
+    total_filtered_rows = len(filtered_rows)
+    total_pages = max(1, (total_filtered_rows + page_size - 1) // page_size)
+    page = parse_positive_int(request.args.get("page"), 1, maximum=total_pages)
+    start_index = (page - 1) * page_size
+    page_rows = filtered_rows[start_index : start_index + page_size]
+    start_display = start_index + 1 if total_filtered_rows else 0
+    end_display = min(start_index + page_size, total_filtered_rows)
 
     return render_template(
         "dashboard.html",
-        rows=rows,
+        rows=page_rows,
         clinics=clinics,
         priorities=priorities,
         total_rows=len(rows),
+        total_filtered_rows=total_filtered_rows,
+        start_display=start_display,
+        end_display=end_display,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+        search=search,
+        selected_clinic=selected_clinic,
+        selected_priority=selected_priority,
     )
 
 

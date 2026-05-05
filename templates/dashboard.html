@@ -36,14 +36,30 @@
             color: #0f766e;
         }
 
-        .toolbar {
+        .toolbar,
+        .pager {
             padding: 16px 28px;
             display: grid;
-            grid-template-columns: 1.3fr 1fr 1fr auto auto auto;
             gap: 12px;
             align-items: center;
             background: #ffffff;
             border-bottom: 1px solid #e5e7eb;
+        }
+
+        .toolbar {
+            grid-template-columns: 1.3fr 1fr 1fr auto auto auto;
+        }
+
+        .pager {
+            grid-template-columns: auto auto auto 1fr auto;
+            border-top: 1px solid #e5e7eb;
+            border-bottom: none;
+        }
+
+        .page-info {
+            color: #475569;
+            font-size: 13px;
+            font-weight: 700;
         }
 
         input,
@@ -155,31 +171,33 @@
             <h1 class="title">Inventory Audit of High Partial</h1>
         </div>
         <div class="summary">
-            Showing <span id="visibleCount">{{ total_rows }}</span> / {{ total_rows }} rows
+            Showing {{ start_display }}-{{ end_display }} of {{ total_filtered_rows }} rows
         </div>
     </div>
 
-    <div class="toolbar">
-        <input id="searchInput" type="search" placeholder="Search name, variant ID, clinic..." oninput="applyFilters()">
+    <form id="filterForm" class="toolbar" method="get">
+        <input id="searchInput" name="search" type="search" value="{{ search }}" placeholder="Search name, variant ID, clinic..." oninput="debouncedSubmit()">
+        <input id="pageInput" name="page" type="hidden" value="{{ page }}">
+        <input id="pageSizeInput" name="page_size" type="hidden" value="{{ page_size }}">
 
-        <select id="clinicFilter" onchange="applyFilters()">
+        <select id="clinicFilter" name="clinic" onchange="submitFilters()">
             <option value="">All Clinics</option>
             {% for clinic in clinics %}
-            <option value="{{ clinic }}">{{ clinic }}</option>
+            <option value="{{ clinic }}" {% if clinic == selected_clinic %}selected{% endif %}>{{ clinic }}</option>
             {% endfor %}
         </select>
 
-        <select id="priorityFilter" onchange="applyFilters()">
+        <select id="priorityFilter" name="priority" onchange="submitFilters()">
             <option value="">All Partial Types</option>
             {% for priority in priorities %}
-            <option value="{{ priority }}">{{ priority }}</option>
+            <option value="{{ priority }}" {% if priority == selected_priority %}selected{% endif %}>{{ priority }}</option>
             {% endfor %}
         </select>
 
         <button type="button" onclick="refreshData()">Refresh</button>
         <button id="sheetButton" type="button" onclick="updateSheet()">Create Sheet</button>
         <button class="secondary" type="button" onclick="resetFilters()">Reset</button>
-    </div>
+    </form>
 
     <div class="status" id="sheetStatus"></div>
 
@@ -196,11 +214,7 @@
             </thead>
             <tbody>
                 {% for row in rows %}
-                <tr
-                    data-search="{{ (row['Name'] ~ ' ' ~ row['Vetic Variant ID'] ~ ' ' ~ row['Clinic ID'] ~ ' ' ~ row['Clinic Name'] ~ ' ' ~ row['Mapped Clinic Name']) | lower }}"
-                    data-clinic="{{ row['Mapped Clinic Name'] }}"
-                    data-priority="{{ row['Partial Type'] }}"
-                >
+                <tr>
                     <td>{{ row["Name"] }}</td>
                     <td>{{ row["Clinic Name"] }}</td>
                     <td>{{ row["Mapped Clinic Name"] }}</td>
@@ -212,36 +226,55 @@
         </table>
     </div>
 
+    <div class="pager">
+        <button class="secondary" type="button" onclick="goToPage(1)" {% if page <= 1 %}disabled{% endif %}>First</button>
+        <button class="secondary" type="button" onclick="goToPage({{ page - 1 }})" {% if page <= 1 %}disabled{% endif %}>Previous</button>
+        <div class="page-info">Page {{ page }} of {{ total_pages }}</div>
+        <select id="pageSize" onchange="changePageSize()">
+            <option value="50" {% if page_size == 50 %}selected{% endif %}>50 rows</option>
+            <option value="100" {% if page_size == 100 %}selected{% endif %}>100 rows</option>
+            <option value="200" {% if page_size == 200 %}selected{% endif %}>200 rows</option>
+            <option value="250" {% if page_size == 250 %}selected{% endif %}>250 rows</option>
+        </select>
+        <div>
+            <button class="secondary" type="button" onclick="goToPage({{ page + 1 }})" {% if page >= total_pages %}disabled{% endif %}>Next</button>
+            <button class="secondary" type="button" onclick="goToPage({{ total_pages }})" {% if page >= total_pages %}disabled{% endif %}>Last</button>
+        </div>
+    </div>
+
     <script>
-        function applyFilters() {
-            const search = document.getElementById("searchInput").value.trim().toLowerCase();
-            const clinic = document.getElementById("clinicFilter").value;
-            const priority = document.getElementById("priorityFilter").value;
-            const rows = document.querySelectorAll("#auditTable tbody tr");
-            let visible = 0;
+        let searchTimer;
 
-            rows.forEach(row => {
-                const searchMatch = !search || row.dataset.search.includes(search);
-                const clinicMatch = !clinic || row.dataset.clinic === clinic;
-                const priorityMatch = !priority || row.dataset.priority === priority;
-                const show = searchMatch && clinicMatch && priorityMatch;
+        function submitFilters() {
+            document.getElementById("pageInput").value = 1;
+            document.getElementById("filterForm").submit();
+        }
 
-                row.style.display = show ? "" : "none";
-                if (show) visible += 1;
-            });
-
-            document.getElementById("visibleCount").innerText = visible;
+        function debouncedSubmit() {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(submitFilters, 450);
         }
 
         function resetFilters() {
-            document.getElementById("searchInput").value = "";
-            document.getElementById("clinicFilter").value = "";
-            document.getElementById("priorityFilter").value = "";
-            applyFilters();
+            window.location.href = "/";
+        }
+
+        function goToPage(page) {
+            document.getElementById("pageInput").value = page;
+            document.getElementById("filterForm").submit();
+        }
+
+        function changePageSize() {
+            const form = document.getElementById("filterForm");
+            document.getElementById("pageSizeInput").value = document.getElementById("pageSize").value;
+            document.getElementById("pageInput").value = 1;
+            form.submit();
         }
 
         function refreshData() {
-            window.location.href = "/?refresh=1";
+            const params = new URLSearchParams(new FormData(document.getElementById("filterForm")));
+            params.set("refresh", "1");
+            window.location.href = "/?" + params.toString();
         }
 
         async function updateSheet() {
