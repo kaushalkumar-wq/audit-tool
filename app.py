@@ -2,6 +2,7 @@ import csv
 import json
 import os
 import re
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,6 +21,13 @@ SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?gid=0#gid=0
 SHARE_EMAILS = ["kaushal.kumar@vetic.in", "sami.uddin@vetic.in"]
 GOOGLE_SERVICE_ACCOUNT_ENV = "GOOGLE_SERVICE_ACCOUNT_JSON"
 GOOGLE_DRIVE_FOLDER_ENV = "GOOGLE_DRIVE_FOLDER_ID"
+CACHE_TTL_SECONDS = int(os.environ.get("AUDIT_CACHE_TTL_SECONDS", "600"))
+AUDIT_CACHE = {
+    "rows": None,
+    "source": "",
+    "error": "",
+    "loaded_at": 0,
+}
 AUDIT_HEADERS = [
     "Vetic Variant ID",
     "Clinic ID",
@@ -301,11 +309,25 @@ def parse_number(value):
     return int(number) if number.is_integer() else number
 
 
-def get_current_rows():
+def get_current_rows(force_refresh=False):
+    cache_age = time.time() - AUDIT_CACHE["loaded_at"]
+    if not force_refresh and AUDIT_CACHE["rows"] is not None and cache_age < CACHE_TTL_SECONDS:
+        return AUDIT_CACHE["rows"], AUDIT_CACHE["source"], AUDIT_CACHE["error"]
+
     try:
-        return load_live_audit_rows(), "live", ""
+        rows, source, error = load_live_audit_rows(), "live", ""
     except Exception as exc:
-        return load_audit_rows(), "csv_fallback", str(exc)
+        rows, source, error = load_audit_rows(), "csv_fallback", str(exc)
+
+    AUDIT_CACHE.update(
+        {
+            "rows": rows,
+            "source": source,
+            "error": error,
+            "loaded_at": time.time(),
+        }
+    )
+    return rows, source, error
 
 
 def filter_rows_by_mapped_clinic(rows, mapped_clinic):
@@ -620,7 +642,7 @@ def share_google_file(drive_service, file_id):
 
 @app.route("/")
 def dashboard():
-    rows, _, _ = get_current_rows()
+    rows, _, _ = get_current_rows(force_refresh=request.args.get("refresh") == "1")
     clinics = sorted({row.get("Mapped Clinic Name", "") for row in rows if row.get("Mapped Clinic Name")})
     priorities = ["Very High", "High", "Normal"]
 
@@ -635,7 +657,7 @@ def dashboard():
 
 @app.route("/api/audit-data")
 def audit_data():
-    rows, source, error = get_current_rows()
+    rows, source, error = get_current_rows(force_refresh=request.args.get("refresh") == "1")
     response = {"source": source, "rows": rows}
     if error:
         response["error"] = error

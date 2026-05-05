@@ -122,28 +122,6 @@
             text-align: right;
         }
 
-        .physical-input {
-            width: 90px;
-            height: 30px;
-            text-align: right;
-        }
-
-        .variance-cell {
-            font-weight: 700;
-        }
-
-        .variance-positive {
-            color: #b91c1c;
-        }
-
-        .variance-zero {
-            color: #047857;
-        }
-
-        .variance-negative {
-            color: #2563eb;
-        }
-
         .priority {
             font-weight: 700;
         }
@@ -210,15 +188,10 @@
             <thead>
                 <tr>
                     <th>Name</th>
-                    <th>Vetic Variant ID</th>
-                    <th>Clinic ID</th>
                     <th>Clinic Name</th>
                     <th>Mapped Clinic Name</th>
                     <th class="num">In Hand Quantity</th>
-                    <th class="num">Bad Inventory Count</th>
                     <th>Partial Type</th>
-                    <th class="num">Physical Count</th>
-                    <th class="num">Variance</th>
                 </tr>
             </thead>
             <tbody>
@@ -227,20 +200,12 @@
                     data-search="{{ (row['Name'] ~ ' ' ~ row['Vetic Variant ID'] ~ ' ' ~ row['Clinic ID'] ~ ' ' ~ row['Clinic Name'] ~ ' ' ~ row['Mapped Clinic Name']) | lower }}"
                     data-clinic="{{ row['Mapped Clinic Name'] }}"
                     data-priority="{{ row['Partial Type'] }}"
-                    data-inhand="{{ row['In Hand Quantity'] }}"
                 >
                     <td>{{ row["Name"] }}</td>
-                    <td>{{ row["Vetic Variant ID"] }}</td>
-                    <td>{{ row["Clinic ID"] }}</td>
                     <td>{{ row["Clinic Name"] }}</td>
                     <td>{{ row["Mapped Clinic Name"] }}</td>
                     <td class="num">{{ row["In Hand Quantity"] }}</td>
-                    <td class="num">{{ row["Bad Inventory Count"] }}</td>
                     <td class="priority {{ row['Partial Type'] | lower | replace(' ', '-') }}">{{ row["Partial Type"] }}</td>
-                    <td class="num">
-                        <input class="physical-input" type="number" min="0" step="1" oninput="updateVariance(this)" placeholder="0">
-                    </td>
-                    <td class="num variance-cell"></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -276,32 +241,7 @@
         }
 
         function refreshData() {
-            window.location.reload();
-        }
-
-        function updateVariance(input) {
-            const row = input.closest("tr");
-            const inHand = Number(row.dataset.inhand || 0);
-            const physicalValue = input.value.trim();
-            const varianceCell = row.querySelector(".variance-cell");
-
-            varianceCell.classList.remove("variance-positive", "variance-zero", "variance-negative");
-
-            if (!physicalValue) {
-                varianceCell.innerText = "";
-                return;
-            }
-
-            const variance = Number(physicalValue) - inHand;
-            varianceCell.innerText = variance;
-
-            if (variance > 0) {
-                varianceCell.classList.add("variance-positive");
-            } else if (variance < 0) {
-                varianceCell.classList.add("variance-negative");
-            } else {
-                varianceCell.classList.add("variance-zero");
-            }
+            window.location.href = "/?refresh=1";
         }
 
         async function updateSheet() {
