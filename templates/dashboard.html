@@ -202,6 +202,23 @@ async function loadData() {
         }
     });
 
+    try {
+        let clinicResponse = await fetch("/audit-clinics");
+        let clinicData = await clinicResponse.json();
+
+        if (clinicData.clinics) {
+            clinicSet = new Set();
+            clinicData.clinics.forEach(clinic => {
+                let opt = document.createElement("option");
+                opt.value = clinic.id;
+                opt.text = clinic.name;
+                clinicDropdown.appendChild(opt);
+            });
+        }
+    } catch (error) {
+        console.log("Mongo clinic list unavailable, using sheet clinics");
+    }
+
     clinicSet.forEach(c => {
         let opt = document.createElement("option");
         opt.value = c;
@@ -228,6 +245,40 @@ function runAudit() {
 
     document.getElementById("result").innerText =
         "✅ " + clinic + " - " + category;
+}
+
+runAudit = async function() {
+    let clinicDropdown = document.getElementById("clinic");
+    let clinic = clinicDropdown.value;
+    let clinicName = clinicDropdown.options[clinicDropdown.selectedIndex].text;
+    let category = document.getElementById("category").value;
+
+    if (!clinic) {
+        document.getElementById("result").innerText = "Select clinic";
+        return;
+    }
+
+    document.getElementById("result").innerText = "Running audit...";
+
+    let response = await fetch("/run-audit", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            clinic_id: clinic,
+            clinic_name: clinicName,
+            category: category
+        })
+    });
+
+    let data = await response.json();
+
+    if (!response.ok) {
+        document.getElementById("result").innerText = data.error || "Audit failed";
+        return;
+    }
+
+    document.getElementById("result").innerText =
+        data.message + " | Rows: " + data.rows + " | To: " + data.email_to;
 }
 
 window.onload = loadData;
