@@ -1,5 +1,6 @@
 import csv
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template
@@ -9,8 +10,8 @@ from pymongo import MongoClient
 app = Flask(__name__)
 DATA_PATH = Path(__file__).parent / "data" / "audit_data.csv"
 MONGO_URI_ENV = "TRANSFER_ORDERS_MONGO_URI"
-MAY_START = "2026-05-01T00:00:00.000Z"
-MAY_END = "2026-06-01T00:00:00.000Z"
+MAY_START = datetime(2026, 5, 1, tzinfo=timezone.utc)
+MAY_END = datetime(2026, 6, 1, tzinfo=timezone.utc)
 
 
 def get_mongo_client():
@@ -43,8 +44,8 @@ def load_live_audit_rows():
         {
             "$match": {
                 "inventory_movement_at": {
-                    "$gte": {"$date": MAY_START},
-                    "$lt": {"$date": MAY_END},
+                    "$gte": MAY_START,
+                    "$lt": MAY_END,
                 },
                 "reason_of_inventory_movement": "Not found in Q COM order",
             }
