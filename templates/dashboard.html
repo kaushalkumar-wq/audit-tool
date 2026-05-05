@@ -39,7 +39,7 @@
         .toolbar {
             padding: 16px 28px;
             display: grid;
-            grid-template-columns: 1.3fr 1fr 1fr auto;
+            grid-template-columns: 1.3fr 1fr 1fr auto auto auto;
             gap: 12px;
             align-items: center;
             background: #ffffff;
@@ -129,11 +129,7 @@
 <body>
     <div class="topbar">
         <div>
-            <h1 class="title">Vetic Audit Data</h1>
-            <p class="subtitle">Bad Inventory May + QCOM in-hand quantity | Source: {{ data_source }}</p>
-            {% if error %}
-            <p class="subtitle">Live Mongo is not connected. Add TRANSFER_ORDERS_MONGO_URI in Render environment variables to enable live data.</p>
-            {% endif %}
+            <h1 class="title">Inventory of high partial items</h1>
         </div>
         <div class="summary">
             Showing <span id="visibleCount">{{ total_rows }}</span> / {{ total_rows }} rows
@@ -157,8 +153,12 @@
             {% endfor %}
         </select>
 
+        <button type="button" onclick="refreshData()">Refresh</button>
+        <button type="button" onclick="updateSheet()">Update Sheet</button>
         <button type="button" onclick="resetFilters()">Reset</button>
     </div>
+
+    <div class="subtitle" id="sheetStatus" style="padding: 0 28px 12px;"></div>
 
     <div class="table-wrap">
         <table id="auditTable">
@@ -221,6 +221,38 @@
             document.getElementById("clinicFilter").value = "";
             document.getElementById("priorityFilter").value = "";
             applyFilters();
+        }
+
+        function refreshData() {
+            window.location.reload();
+        }
+
+        async function updateSheet() {
+            const clinic = document.getElementById("clinicFilter").value;
+            const status = document.getElementById("sheetStatus");
+
+            if (!clinic) {
+                status.innerText = "Select a clinic before updating the sheet.";
+                return;
+            }
+
+            status.innerText = "Updating Audit sheet...";
+
+            const response = await fetch("/api/update-sheet", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({mapped_clinic: clinic})
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                status.innerText = data.error || "Sheet update failed.";
+                return;
+            }
+
+            status.innerHTML =
+                "Updated " + data.rows + " rows and shared with kaushal.kumar@vetic.in, sami.uddin@vetic.in. " +
+                '<a href="' + data.sheet_url + '" target="_blank">Open Sheet</a>';
         }
     </script>
 </body>

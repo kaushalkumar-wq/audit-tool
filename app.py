@@ -1,9 +1,10 @@
 import csv
+import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 from pymongo import MongoClient
 
 
@@ -12,6 +13,11 @@ DATA_PATH = Path(__file__).parent / "data" / "audit_data.csv"
 MONGO_URI_ENV = "TRANSFER_ORDERS_MONGO_URI"
 MAY_START = datetime(2026, 5, 1, tzinfo=timezone.utc)
 MAY_END = datetime(2026, 6, 1, tzinfo=timezone.utc)
+SHEET_ID = "1TVXKiZrqH42ogu5dm1IQF8I0xplAmvaUrvdHLZWVP_Y"
+SHEET_TAB = "Audit"
+SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?gid=0#gid=0"
+SHARE_EMAILS = ["kaushal.kumar@vetic.in", "sami.uddin@vetic.in"]
+GOOGLE_SERVICE_ACCOUNT_ENV = "GOOGLE_SERVICE_ACCOUNT_JSON"
 
 
 def get_mongo_client():
@@ -274,17 +280,104 @@ def parse_number(value):
     return int(number) if number.is_integer() else number
 
 
+def get_current_rows():
+    try:
+        return load_live_audit_rows(), "live", ""
+    except Exception as exc:
+        return load_audit_rows(), "csv_fallback", str(exc)
+
+
+def filter_rows_by_mapped_clinic(rows, mapped_clinic):
+    if not mapped_clinic:
+        return rows
+    return [row for row in rows if row.get("Mapped Clinic Name") == mapped_clinic]
+
+
+def get_google_credentials():
+    service_account_json = os.environ.get(GOOGLE_SERVICE_ACCOUNT_ENV)
+    if not service_account_json:
+        raise RuntimeError(f"{GOOGLE_SERVICE_ACCOUNT_ENV} is not configured")
+
+    from google.oauth2 import service_account
+
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    info = json.loads(service_account_json)
+    return service_account.Credentials.from_service_account_info(info, scopes=scopes)
+
+
+def get_google_service(api_name, api_version):
+    from googleapiclient.discovery import build
+
+    return build(api_name, api_version, credentials=get_google_credentials(), cache_discovery=False)
+
+
+def ensure_sheet_tab(sheets_service):
+    spreadsheet = sheets_service.spreadsheets().get(spreadsheetId=SHEET_ID).execute()
+    sheets = spreadsheet.get("sheets", [])
+
+    if any(sheet.get("properties", {}).get("title") == SHEET_TAB for sheet in sheets):
+        return
+
+    sheets_service.spreadsheets().batchUpdate(
+        spreadsheetId=SHEET_ID,
+        body={"requests": [{"addSheet": {"properties": {"title": SHEET_TAB}}}]},
+    ).execute()
+
+
+def update_google_sheet(rows):
+    sheets_service = get_google_service("sheets", "v4")
+    ensure_sheet_tab(sheets_service)
+
+    headers = [
+        "Name",
+        "Vetic Variant ID",
+        "Clinic ID",
+        "Clinic Name",
+        "Mapped Clinic Name",
+        "In Hand Quantity",
+        "Bad Inventory Count",
+        "Priority",
+    ]
+    values = [headers]
+    values.extend([[row.get(header, "") for header in headers] for row in rows])
+
+    sheets_service.spreadsheets().values().clear(
+        spreadsheetId=SHEET_ID,
+        range=f"{SHEET_TAB}!A:Z",
+        body={},
+    ).execute()
+
+    sheets_service.spreadsheets().values().update(
+        spreadsheetId=SHEET_ID,
+        range=f"{SHEET_TAB}!A1",
+        valueInputOption="RAW",
+        body={"values": values},
+    ).execute()
+
+    share_google_sheet()
+    return SHEET_URL
+
+
+def share_google_sheet():
+    drive_service = get_google_service("drive", "v3")
+
+    for email in SHARE_EMAILS:
+        try:
+            drive_service.permissions().create(
+                fileId=SHEET_ID,
+                body={"type": "user", "role": "writer", "emailAddress": email},
+                sendNotificationEmail=True,
+            ).execute()
+        except Exception:
+            pass
+
+
 @app.route("/")
 def dashboard():
-    try:
-        rows = load_live_audit_rows()
-        data_source = "Live Mongo"
-        error = ""
-    except Exception as exc:
-        rows = load_audit_rows()
-        data_source = "CSV fallback"
-        error = str(exc)
-
+    rows, _, _ = get_current_rows()
     clinics = sorted({row.get("Mapped Clinic Name", "") for row in rows if row.get("Mapped Clinic Name")})
     priorities = ["Very High", "High", "Normal"]
 
@@ -294,18 +387,38 @@ def dashboard():
         clinics=clinics,
         priorities=priorities,
         total_rows=len(rows),
-        data_source=data_source,
-        error=error,
     )
 
 
 @app.route("/api/audit-data")
 def audit_data():
+    rows, source, error = get_current_rows()
+    response = {"source": source, "rows": rows}
+    if error:
+        response["error"] = error
+    return jsonify(response)
+
+
+@app.route("/api/update-sheet", methods=["POST"])
+def update_sheet():
+    payload = request.get_json(silent=True) or {}
+    mapped_clinic = payload.get("mapped_clinic", "")
+    rows, source, error = get_current_rows()
+    rows = filter_rows_by_mapped_clinic(rows, mapped_clinic)
+
     try:
-        rows = load_live_audit_rows()
-        return jsonify({"source": "live", "rows": rows})
+        sheet_url = update_google_sheet(rows)
     except Exception as exc:
-        return jsonify({"source": "csv_fallback", "error": str(exc), "rows": load_audit_rows()})
+        return jsonify({"error": str(exc), "source": source, "fallback_error": error}), 500
+
+    return jsonify(
+        {
+            "rows": len(rows),
+            "source": source,
+            "sheet_url": sheet_url,
+            "shared_with": SHARE_EMAILS,
+        }
+    )
 
 
 if __name__ == "__main__":
