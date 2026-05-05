@@ -12,7 +12,7 @@ from pymongo import MongoClient
 app = Flask(__name__)
 DATA_PATH = Path(__file__).parent / "data" / "audit_data.csv"
 MONGO_URI_ENV = "TRANSFER_ORDERS_MONGO_URI"
-MAY_START = datetime(2026, 5, 1, tzinfo=timezone.utc)
+MAY_START = datetime(2026, 1, 1, tzinfo=timezone.utc)
 MAY_END = datetime(2026, 6, 1, tzinfo=timezone.utc)
 SHEET_ID = "1TVXKiZrqH42ogu5dm1IQF8I0xplAmvaUrvdHLZWVP_Y"
 SHEET_TAB = "Audit"
