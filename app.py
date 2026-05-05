@@ -378,22 +378,95 @@ def create_clinic_audit_sheet(rows, mapped_clinic, source):
     title_clinic = mapped_clinic or "All Clinics"
     title = f"Inventory Audit - {title_clinic} - {created_at}"
 
-    spreadsheet_id = create_spreadsheet_file(drive_service, title)
-    spreadsheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
-    sheet_id = get_first_sheet_id(sheets_service, spreadsheet_id)
+    try:
+        spreadsheet_id = create_spreadsheet_file(drive_service, title)
+        spreadsheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
+        sheet_id = get_first_sheet_id(sheets_service, spreadsheet_id)
+        write_range = "Audit!A1"
+        created_target = "new_file"
+    except Exception as exc:
+        if not is_storage_quota_error(exc):
+            raise
+        spreadsheet_id = SHEET_ID
+        sheet_title, sheet_id = create_master_workbook_tab(sheets_service, title_clinic)
+        spreadsheet_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={sheet_id}"
+        write_range = f"{quote_sheet_name(sheet_title)}!A1"
+        created_target = "master_tab"
 
     values = build_audit_values(rows)
     sheets_service.spreadsheets().values().update(
         spreadsheetId=spreadsheet_id,
-        range="Audit!A1",
+        range=write_range,
         valueInputOption="USER_ENTERED",
         body={"values": values},
     ).execute()
 
     format_audit_sheet(sheets_service, spreadsheet_id, sheet_id, len(values))
-    share_google_file(drive_service, spreadsheet_id)
-    update_master_audit_link(sheets_service, spreadsheet_url, mapped_clinic, len(rows), created_at, source)
+    if created_target == "new_file":
+        share_google_file(drive_service, spreadsheet_id)
+    update_master_audit_link(
+        sheets_service,
+        spreadsheet_url,
+        mapped_clinic,
+        len(rows),
+        created_at,
+        source,
+        created_target,
+    )
     return spreadsheet_url
+
+
+def is_storage_quota_error(exc):
+    text = str(exc)
+    return "storageQuotaExceeded" in text or "Drive storage quota has been exceeded" in text
+
+
+def create_master_workbook_tab(sheets_service, mapped_clinic):
+    base_title = sanitize_sheet_title(f"{mapped_clinic or 'All Clinics'} Audit")
+    existing_titles = get_sheet_titles(sheets_service, SHEET_ID)
+    sheet_title = unique_sheet_title(base_title, existing_titles)
+
+    response = sheets_service.spreadsheets().batchUpdate(
+        spreadsheetId=SHEET_ID,
+        body={"requests": [{"addSheet": {"properties": {"title": sheet_title}}}]},
+    ).execute()
+    sheet_id = response["replies"][0]["addSheet"]["properties"]["sheetId"]
+    return sheet_title, sheet_id
+
+
+def get_sheet_titles(sheets_service, spreadsheet_id):
+    spreadsheet = sheets_service.spreadsheets().get(
+        spreadsheetId=spreadsheet_id,
+        fields="sheets.properties.title",
+    ).execute()
+    return {
+        sheet["properties"]["title"]
+        for sheet in spreadsheet.get("sheets", [])
+        if sheet.get("properties", {}).get("title")
+    }
+
+
+def sanitize_sheet_title(title):
+    cleaned = re.sub(r"[\[\]\*\?/\\:]", "-", title).strip()
+    return (cleaned or "Audit")[:80]
+
+
+def unique_sheet_title(base_title, existing_titles):
+    if base_title not in existing_titles:
+        return base_title
+
+    stamp = datetime.now(timezone.utc).strftime("%m%d-%H%M%S")
+    title = f"{base_title[:70]} {stamp}"
+    counter = 2
+    while title in existing_titles:
+        suffix = f" {stamp}-{counter}"
+        title = f"{base_title[:99 - len(suffix)]}{suffix}"
+        counter += 1
+    return title
+
+
+def quote_sheet_name(sheet_title):
+    return "'" + sheet_title.replace("'", "''") + "'"
 
 
 def create_spreadsheet_file(drive_service, title):
@@ -520,7 +593,15 @@ def format_audit_sheet(sheets_service, spreadsheet_id, sheet_id, row_count):
     ).execute()
 
 
-def update_master_audit_link(sheets_service, generated_sheet_url, mapped_clinic, row_count, created_at, source):
+def update_master_audit_link(
+    sheets_service,
+    generated_sheet_url,
+    mapped_clinic,
+    row_count,
+    created_at,
+    source,
+    created_target,
+):
     sheet_id = ensure_sheet_tab(sheets_service)
     existing = sheets_service.spreadsheets().values().get(
         spreadsheetId=SHEET_ID,
@@ -552,7 +633,7 @@ def update_master_audit_link(sheets_service, generated_sheet_url, mapped_clinic,
                     mapped_clinic or "All Clinics",
                     row_count,
                     f'=HYPERLINK("{generated_sheet_url}","Open Sheet")',
-                    "Live Mongo" if source == "live" else "CSV fallback",
+                    format_source_label(source, created_target),
                 ]
             ]
         },
@@ -590,6 +671,12 @@ def update_master_audit_link(sheets_service, generated_sheet_url, mapped_clinic,
             ]
         },
     ).execute()
+
+
+def format_source_label(source, created_target):
+    source_label = "Live Mongo" if source == "live" else "CSV fallback"
+    target_label = "New spreadsheet" if created_target == "new_file" else "Master workbook tab"
+    return f"{source_label} | {target_label}"
 
 
 def share_google_file(drive_service, file_id):
