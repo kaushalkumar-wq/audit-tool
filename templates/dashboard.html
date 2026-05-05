@@ -65,6 +65,29 @@
             cursor: pointer;
         }
 
+        button.secondary {
+            background: #ffffff;
+            color: #0f766e;
+            border: 1px solid #0f766e;
+        }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: wait;
+        }
+
+        .status {
+            min-height: 18px;
+            padding: 0 28px 12px;
+            color: #475569;
+            font-size: 13px;
+        }
+
+        .status a {
+            color: #0f766e;
+            font-weight: 700;
+        }
+
         .table-wrap {
             padding: 18px 28px 28px;
             overflow: auto;
@@ -97,6 +120,28 @@
 
         .num {
             text-align: right;
+        }
+
+        .physical-input {
+            width: 90px;
+            height: 30px;
+            text-align: right;
+        }
+
+        .variance-cell {
+            font-weight: 700;
+        }
+
+        .variance-positive {
+            color: #b91c1c;
+        }
+
+        .variance-zero {
+            color: #047857;
+        }
+
+        .variance-negative {
+            color: #2563eb;
         }
 
         .priority {
@@ -147,18 +192,18 @@
         </select>
 
         <select id="priorityFilter" onchange="applyFilters()">
-            <option value="">All Priorities</option>
+            <option value="">All Partial Types</option>
             {% for priority in priorities %}
             <option value="{{ priority }}">{{ priority }}</option>
             {% endfor %}
         </select>
 
         <button type="button" onclick="refreshData()">Refresh</button>
-        <button type="button" onclick="updateSheet()">Update Sheet</button>
-        <button type="button" onclick="resetFilters()">Reset</button>
+        <button id="sheetButton" type="button" onclick="updateSheet()">Create Sheet</button>
+        <button class="secondary" type="button" onclick="resetFilters()">Reset</button>
     </div>
 
-    <div class="subtitle" id="sheetStatus" style="padding: 0 28px 12px;"></div>
+    <div class="status" id="sheetStatus"></div>
 
     <div class="table-wrap">
         <table id="auditTable">
@@ -171,7 +216,9 @@
                     <th>Mapped Clinic Name</th>
                     <th class="num">In Hand Quantity</th>
                     <th class="num">Bad Inventory Count</th>
-                    <th>Priority</th>
+                    <th>Partial Type</th>
+                    <th class="num">Physical Count</th>
+                    <th class="num">Variance</th>
                 </tr>
             </thead>
             <tbody>
@@ -179,7 +226,8 @@
                 <tr
                     data-search="{{ (row['Name'] ~ ' ' ~ row['Vetic Variant ID'] ~ ' ' ~ row['Clinic ID'] ~ ' ' ~ row['Clinic Name'] ~ ' ' ~ row['Mapped Clinic Name']) | lower }}"
                     data-clinic="{{ row['Mapped Clinic Name'] }}"
-                    data-priority="{{ row['Priority'] }}"
+                    data-priority="{{ row['Partial Type'] }}"
+                    data-inhand="{{ row['In Hand Quantity'] }}"
                 >
                     <td>{{ row["Name"] }}</td>
                     <td>{{ row["Vetic Variant ID"] }}</td>
@@ -188,7 +236,11 @@
                     <td>{{ row["Mapped Clinic Name"] }}</td>
                     <td class="num">{{ row["In Hand Quantity"] }}</td>
                     <td class="num">{{ row["Bad Inventory Count"] }}</td>
-                    <td class="priority {{ row['Priority'] | lower | replace(' ', '-') }}">{{ row["Priority"] }}</td>
+                    <td class="priority {{ row['Partial Type'] | lower | replace(' ', '-') }}">{{ row["Partial Type"] }}</td>
+                    <td class="num">
+                        <input class="physical-input" type="number" min="0" step="1" oninput="updateVariance(this)" placeholder="0">
+                    </td>
+                    <td class="num variance-cell"></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -227,32 +279,67 @@
             window.location.reload();
         }
 
+        function updateVariance(input) {
+            const row = input.closest("tr");
+            const inHand = Number(row.dataset.inhand || 0);
+            const physicalValue = input.value.trim();
+            const varianceCell = row.querySelector(".variance-cell");
+
+            varianceCell.classList.remove("variance-positive", "variance-zero", "variance-negative");
+
+            if (!physicalValue) {
+                varianceCell.innerText = "";
+                return;
+            }
+
+            const variance = inHand - Number(physicalValue);
+            varianceCell.innerText = variance;
+
+            if (variance > 0) {
+                varianceCell.classList.add("variance-positive");
+            } else if (variance < 0) {
+                varianceCell.classList.add("variance-negative");
+            } else {
+                varianceCell.classList.add("variance-zero");
+            }
+        }
+
         async function updateSheet() {
             const clinic = document.getElementById("clinicFilter").value;
             const status = document.getElementById("sheetStatus");
+            const button = document.getElementById("sheetButton");
 
             if (!clinic) {
-                status.innerText = "Select a clinic before updating the sheet.";
+                status.innerText = "Select one clinic, then create the audit sheet.";
                 return;
             }
 
-            status.innerText = "Updating Audit sheet...";
+            button.disabled = true;
+            status.innerText = "Creating a new clinic sheet and saving the link in the master Audit tab...";
 
-            const response = await fetch("/api/update-sheet", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({mapped_clinic: clinic})
-            });
-            const data = await response.json();
+            try {
+                const response = await fetch("/api/update-sheet", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({mapped_clinic: clinic})
+                });
+                const data = await response.json();
 
-            if (!response.ok) {
-                status.innerText = data.error || "Sheet update failed.";
-                return;
+                if (!response.ok) {
+                    status.innerText = data.error || "Sheet creation failed.";
+                    return;
+                }
+
+                status.innerHTML =
+                    "Created " + data.rows + " rows. " +
+                    '<a href="' + data.sheet_url + '" target="_blank">Open new sheet</a>' +
+                    " | " +
+                    '<a href="' + data.master_sheet_url + '" target="_blank">Open master Audit tab</a>';
+            } catch (error) {
+                status.innerText = "Sheet creation failed. Please try again.";
+            } finally {
+                button.disabled = false;
             }
-
-            status.innerHTML =
-                "Updated " + data.rows + " rows and shared with kaushal.kumar@vetic.in, sami.uddin@vetic.in. " +
-                '<a href="' + data.sheet_url + '" target="_blank">Open Sheet</a>';
         }
     </script>
 </body>
