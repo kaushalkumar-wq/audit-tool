@@ -18,6 +18,7 @@ SHEET_TAB = "Audit"
 SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?gid=0#gid=0"
 SHARE_EMAILS = ["kaushal.kumar@vetic.in", "sami.uddin@vetic.in"]
 GOOGLE_SERVICE_ACCOUNT_ENV = "GOOGLE_SERVICE_ACCOUNT_JSON"
+GOOGLE_DRIVE_FOLDER_ENV = "GOOGLE_DRIVE_FOLDER_ID"
 AUDIT_HEADERS = [
     "Vetic Variant ID",
     "Clinic ID",
@@ -376,16 +377,9 @@ def create_clinic_audit_sheet(rows, mapped_clinic, source):
     title_clinic = mapped_clinic or "All Clinics"
     title = f"Inventory Audit - {title_clinic} - {created_at}"
 
-    spreadsheet = sheets_service.spreadsheets().create(
-        body={
-            "properties": {"title": title},
-            "sheets": [{"properties": {"title": "Audit"}}],
-        },
-        fields="spreadsheetId,spreadsheetUrl,sheets.properties.sheetId",
-    ).execute()
-    spreadsheet_id = spreadsheet["spreadsheetId"]
-    spreadsheet_url = spreadsheet["spreadsheetUrl"]
-    sheet_id = spreadsheet["sheets"][0]["properties"]["sheetId"]
+    spreadsheet_id = create_spreadsheet_file(drive_service, title)
+    spreadsheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
+    sheet_id = get_first_sheet_id(sheets_service, spreadsheet_id)
 
     values = build_audit_values(rows)
     sheets_service.spreadsheets().values().update(
@@ -399,6 +393,51 @@ def create_clinic_audit_sheet(rows, mapped_clinic, source):
     share_google_file(drive_service, spreadsheet_id)
     update_master_audit_link(sheets_service, spreadsheet_url, mapped_clinic, len(rows), created_at, source)
     return spreadsheet_url
+
+
+def create_spreadsheet_file(drive_service, title):
+    folder_id = os.environ.get(GOOGLE_DRIVE_FOLDER_ENV)
+    metadata = {
+        "name": title,
+        "mimeType": "application/vnd.google-apps.spreadsheet",
+    }
+    if folder_id:
+        metadata["parents"] = [folder_id]
+
+    file = drive_service.files().create(
+        body=metadata,
+        fields="id",
+        supportsAllDrives=True,
+    ).execute()
+    return file["id"]
+
+
+def get_first_sheet_id(sheets_service, spreadsheet_id):
+    spreadsheet = sheets_service.spreadsheets().get(
+        spreadsheetId=spreadsheet_id,
+        fields="sheets.properties.sheetId,sheets.properties.title",
+    ).execute()
+    first_sheet = spreadsheet["sheets"][0]["properties"]
+
+    if first_sheet.get("title") != "Audit":
+        sheets_service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={
+                "requests": [
+                    {
+                        "updateSheetProperties": {
+                            "properties": {
+                                "sheetId": first_sheet["sheetId"],
+                                "title": "Audit",
+                            },
+                            "fields": "title",
+                        }
+                    }
+                ]
+            },
+        ).execute()
+
+    return first_sheet["sheetId"]
 
 
 def format_audit_sheet(sheets_service, spreadsheet_id, sheet_id, row_count):
