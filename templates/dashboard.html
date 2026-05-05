@@ -202,23 +202,6 @@ async function loadData() {
         }
     });
 
-    try {
-        let clinicResponse = await fetch("/audit-clinics");
-        let clinicData = await clinicResponse.json();
-
-        if (clinicData.clinics) {
-            clinicSet = new Set();
-            clinicData.clinics.forEach(clinic => {
-                let opt = document.createElement("option");
-                opt.value = clinic.id;
-                opt.text = clinic.name;
-                clinicDropdown.appendChild(opt);
-            });
-        }
-    } catch (error) {
-        console.log("Mongo clinic list unavailable, using sheet clinics");
-    }
-
     clinicSet.forEach(c => {
         let opt = document.createElement("option");
         opt.value = c;
@@ -232,6 +215,25 @@ async function loadData() {
         opt.text = c;
         categoryDropdown.appendChild(opt);
     });
+
+    try {
+        let clinicResponse = await fetch("/audit-clinics");
+        let clinicData = await clinicResponse.json();
+
+        if (clinicData.clinics) {
+            clinicDropdown.innerHTML = '<option value="">Select Clinic</option>';
+            clinicData.clinics.forEach(clinic => {
+                let opt = document.createElement("option");
+                opt.value = clinic.id;
+                opt.text = clinic.name;
+                clinicDropdown.appendChild(opt);
+            });
+        } else if (clinicData.error) {
+            document.getElementById("result").innerText = clinicData.error;
+        }
+    } catch (error) {
+        console.log("Mongo clinic list unavailable, using sheet clinics");
+    }
 }
 
 function runAudit() {

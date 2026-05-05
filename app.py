@@ -19,9 +19,13 @@ MONGO_URI_ENV = "TRANSFER_ORDERS_MONGO_URI"
 
 
 def get_mongo_client():
-    mongo_uri = os.environ.get(MONGO_URI_ENV)
+    mongo_uri = (
+        os.environ.get(MONGO_URI_ENV)
+        or os.environ.get("MONGO_URI")
+        or os.environ.get("MONGODB_URI")
+    )
     if not mongo_uri:
-        raise RuntimeError(f"{MONGO_URI_ENV} is not configured")
+        raise RuntimeError(f"{MONGO_URI_ENV}, MONGO_URI, or MONGODB_URI is not configured")
     return MongoClient(mongo_uri)
 
 
