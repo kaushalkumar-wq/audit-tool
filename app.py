@@ -336,7 +336,7 @@ def filter_rows_by_mapped_clinic(rows, mapped_clinic):
     return [row for row in rows if row.get("Mapped Clinic Name") == mapped_clinic]
 
 
-def filter_dashboard_rows(rows, search="", clinic="", priority=""):
+def filter_dashboard_rows(rows, search="", clinic="", priority="", quantity_filter=""):
     search = (search or "").strip().lower()
     filtered_rows = rows
 
@@ -361,6 +361,13 @@ def filter_dashboard_rows(rows, search="", clinic="", priority=""):
 
     if priority:
         filtered_rows = [row for row in filtered_rows if row.get("Partial Type") == priority]
+
+    if quantity_filter == "1-5":
+        filtered_rows = [
+            row
+            for row in filtered_rows
+            if 1 <= parse_number(row.get("In Hand Quantity")) <= 5
+        ]
 
     return filtered_rows
 
@@ -686,8 +693,9 @@ def dashboard():
     search = request.args.get("search", "")
     selected_clinic = request.args.get("clinic", "")
     selected_priority = request.args.get("priority", "")
+    selected_quantity = request.args.get("quantity", "")
     page_size = parse_positive_int(request.args.get("page_size"), 100, maximum=250)
-    filtered_rows = filter_dashboard_rows(rows, search, selected_clinic, selected_priority)
+    filtered_rows = filter_dashboard_rows(rows, search, selected_clinic, selected_priority, selected_quantity)
     total_filtered_rows = len(filtered_rows)
     total_pages = max(1, (total_filtered_rows + page_size - 1) // page_size)
     page = parse_positive_int(request.args.get("page"), 1, maximum=total_pages)
@@ -711,6 +719,7 @@ def dashboard():
         search=search,
         selected_clinic=selected_clinic,
         selected_priority=selected_priority,
+        selected_quantity=selected_quantity,
     )
 
 
